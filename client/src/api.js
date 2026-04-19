@@ -36,6 +36,11 @@ export async function fetchProperties() {
   return response.json();
 }
 
+export async function fetchPropertyById(propertyId) {
+  const response = await request(`/api/properties/${propertyId}`);
+  return response.json();
+}
+
 export async function fetchAdminContact() {
   const response = await request("/api/auth/admin-contact");
   return response.json();

@@ -1,4 +1,5 @@
 import { Property } from "../models/Property.js";
+import { PropertyInterest } from "../models/PropertyInterest.js";
 import { fetchDriveFileStream, fetchDriveMedia } from "../services/driveService.js";
 import { generatePropertyReadme } from "../services/readmeService.js";
 
