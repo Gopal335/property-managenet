@@ -2,6 +2,18 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchProperties } from "../api";
 
+function getPreviewMedia(property) {
+  if (!property.mediaFiles?.length) {
+    return null;
+  }
+
+  return (
+    property.mediaFiles.find((file) => file.mimeType?.startsWith("image/")) ||
+    property.mediaFiles.find((file) => file.mimeType?.startsWith("video/")) ||
+    property.mediaFiles[0]
+  );
+}
+
 export default function Home() {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,19 +55,46 @@ export default function Home() {
           <p className="no-data-text">No properties available yet.</p>
         ) : (
           <div className="property-grid">
-            {properties.map((property) => (
-              <div key={property._id} className="property-card glass-panel">
-                <div className="property-info">
-                  <h3 className="property-name">{property.title}</h3>
-                  <p className="property-location">{property.location}</p>
-                </div>
-                <div className="property-actions">
-                  <Link to={`/property/${property._id}`} className="view-btn">
-                    View Property
-                  </Link>
-                </div>
-              </div>
-            ))}
+            {properties.map((property) => {
+              const previewMedia = getPreviewMedia(property);
+              const previewSrc = previewMedia
+                ? previewMedia.thumbnailLink || `/api/properties/media/${previewMedia.fileId}`
+                : null;
+
+              return (
+                <article key={property._id} className="property-card glass-panel">
+                  <div className="property-preview">
+                    {previewSrc ? (
+                      <img
+                        src={previewSrc}
+                        alt={`${property.title} preview`}
+                        className="property-preview-image"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="property-preview-fallback">
+                        <span>No preview</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="property-info">
+                    <div className="property-meta">
+                      <p className="property-location">{property.location || "Location unavailable"}</p>
+                      <span className="property-files">{property.mediaFiles?.length || 0} files</span>
+                    </div>
+                    <h3 className="property-name">{property.title}</h3>
+                    <p className="property-description">{property.description || "No description available yet."}</p>
+                  </div>
+
+                  <div className="property-actions">
+                    <Link to={`/property/${property._id}`} className="view-btn">
+                      View Property
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
