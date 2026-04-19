@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { deleteProperty, fetchAdminContact, fetchPropertyById, fetchPropertyReadme, submitPropertyInterest } from "../api";
 import { useAuth } from "../context/AuthContext";
@@ -75,12 +76,13 @@ export default function PropertyDetails() {
     }
   };
 
+  const [selectedMedia, setSelectedMedia] = useState(null);
+
   if (loading) return <div className="loading-state">Loading property details...</div>;
   if (error) return <div className="error-state">{error}</div>;
   if (!property) return <div className="error-state">Property not found</div>;
 
-  const images = property.mediaFiles?.filter(f => f.mimeType.startsWith("image/")) || [];
-  const videos = property.mediaFiles?.filter(f => f.mimeType.startsWith("video/")) || [];
+  const allMedia = property.mediaFiles || [];
 
   return (
     <div className="property-details-container fade-in">
@@ -89,7 +91,7 @@ export default function PropertyDetails() {
           <h1>{property.title}</h1>
           <p className="location-price">
             <span className="location">📍 {property.location || "Location not specified"}</span>
-            <span className="price">🏷️ ${property.price.toLocaleString()}</span>
+            <span className="price">🏷️ ₹{property.price.toLocaleString()}</span>
           </p>
         </div>
         <div className="header-actions">
@@ -156,32 +158,82 @@ export default function PropertyDetails() {
       </div>
 
       <section className="gallery-section">
-        <h3>Photo Gallery</h3>
-        {images.length === 0 ? (
-          <p className="no-media">No images available for this property.</p>
+        <h3>Property Media</h3>
+        {allMedia.length === 0 ? (
+          <p className="no-media">No media available for this property.</p>
         ) : (
-          <div className="gallery-grid">
-            {images.map(img => (
-              <div key={img.fileId} className="gallery-item">
-                <img src={`/api/properties/media/${img.fileId}`} alt={img.name} loading="lazy" />
+          <div className="small-gallery-grid">
+            {allMedia.map((media) => (
+              <div 
+                key={media.fileId} 
+                className="small-gallery-item"
+                onClick={() => setSelectedMedia(media)}
+              >
+                {media.mimeType.startsWith("image/") ? (
+                  <img src={media.thumbnailLink || `/api/properties/media/${media.fileId}`} alt={media.name} loading="lazy" />
+                ) : (
+                  <div className="video-thumb-overlay">
+                    {media.thumbnailLink ? (
+                      <img src={media.thumbnailLink} alt={media.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <video src={`/api/properties/media/${media.fileId}#t=0.1`} preload="metadata" />
+                    )}
+                    <div className="play-icon">▶</div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
+      </section>
 
-        {videos.length > 0 && (
-          <>
-            <h3 className="video-title">Property Videos</h3>
-            <div className="video-grid">
-              {videos.map(vid => (
-                <div key={vid.fileId} className="video-item">
-                  <video controls src={`/api/properties/media/${vid.fileId}`} />
+      {selectedMedia && createPortal(
+        <div className="lightbox-overlay fade-in" onClick={(e) => {
+          if(e.target.className.includes('lightbox-overlay')) setSelectedMedia(null);
+        }}>
+          <div className="lightbox-content slide-down">
+            <button className="close-lightbox" onClick={() => setSelectedMedia(null)}>×</button>
+            
+            <div className="lightbox-thumbnails">
+              {allMedia.map((media) => (
+                <div 
+                  key={media.fileId} 
+                  className={`lightbox-thumb ${selectedMedia.fileId === media.fileId ? "active" : ""}`}
+                  onClick={() => setSelectedMedia(media)}
+                >
+                  {media.mimeType.startsWith("image/") ? (
+                    <img src={`/api/properties/media/${media.fileId}`} alt="thumb" />
+                  ) : (
+                    <div className="video-thumb-small">
+                      {media.thumbnailLink ? (
+                        <img src={media.thumbnailLink} alt="thumb" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <video src={`/api/properties/media/${media.fileId}#t=0.1`} preload="metadata" />
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-          </>
-        )}
-      </section>
+
+            <div className="lightbox-main-media">
+              {selectedMedia.mimeType.startsWith("image/") ? (
+                <img src={`/api/properties/media/${selectedMedia.fileId}`} alt={selectedMedia.name} />
+              ) : (
+                <iframe 
+                  src={selectedMedia.webViewLink ? selectedMedia.webViewLink.replace('/view', '/preview') : `https://drive.google.com/file/d/${selectedMedia.fileId}/preview`}
+                  allow="autoplay" 
+                  allowFullScreen
+                  title={selectedMedia.name}
+                  className="video-iframe"
+                ></iframe>
+              )}
+              <p className="media-caption">{selectedMedia.name}</p>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

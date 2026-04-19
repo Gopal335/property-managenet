@@ -141,16 +141,40 @@ export async function submitPropertyInterest(req, res) {
 export async function streamPropertyImage(req, res) {
   try {
     const { fileId } = req.params;
-    const { mimeType, stream } = await fetchDriveFileStream(fileId);
+    const range = req.headers.range;
+    const { mimeType, stream, headers, status } = await fetchDriveFileStream(fileId, range);
 
-    res.setHeader("Content-Type", mimeType);
+    res.status(status);
+    
+    const copyHeaders = ['content-range', 'accept-ranges', 'content-length', 'content-type'];
+    for (const h of copyHeaders) {
+      if (headers[h]) {
+        res.setHeader(h, headers[h]);
+      } else if (headers[h.toLowerCase()]) {
+        res.setHeader(h, headers[h.toLowerCase()]);
+      }
+    }
+    
+    if (!res.getHeader('Content-Type')) {
+      res.setHeader("Content-Type", mimeType);
+    }
     res.setHeader("Cache-Control", "public, max-age=3600");
+    
     stream.on("error", () => {
       if (!res.headersSent) {
-        res.status(500).json({ message: "Image stream failed." });
+        res.status(500).json({ message: "Media stream failed." });
       }
     });
     stream.pipe(res);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+}
+
+export async function getInterests(req, res) {
+  try {
+    const interests = await PropertyInterest.find().populate("property", "title").sort({ createdAt: -1 });
+    return res.json(interests);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

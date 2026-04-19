@@ -46,6 +46,11 @@ export async function fetchAdminContact() {
   return response.json();
 }
 
+export async function fetchInterests() {
+  const response = await request("/api/properties/interests/list");
+  return response.json();
+}
+
 export async function submitPropertyInterest(propertyId, payload) {
   const response = await request(`/api/properties/${propertyId}/interest`, {
     method: "POST",

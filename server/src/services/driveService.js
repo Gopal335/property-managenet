@@ -81,7 +81,7 @@ export async function fetchDriveMedia(folderUrlOrId) {
   return files;
 }
 
-export async function fetchDriveFileStream(fileId) {
+export async function fetchDriveFileStream(fileId, range) {
   const drive = getDriveClient();
 
   const metadataResponse = await drive.files.get({
@@ -91,8 +91,13 @@ export async function fetchDriveFileStream(fileId) {
   });
 
   const mimeType = metadataResponse.data.mimeType ?? "application/octet-stream";
-  if (!mimeType.startsWith("image/")) {
-    throw new Error("Only image streaming is supported via this endpoint.");
+  if (!mimeType.startsWith("image/") && !mimeType.startsWith("video/")) {
+    throw new Error("Only image and video streaming is supported via this endpoint.");
+  }
+
+  const options = { responseType: "stream" };
+  if (range) {
+    options.headers = { Range: range };
   }
 
   const mediaResponse = await drive.files.get(
@@ -101,11 +106,13 @@ export async function fetchDriveFileStream(fileId) {
       alt: "media",
       supportsAllDrives: true,
     },
-    { responseType: "stream" }
+    options
   );
 
   return {
     mimeType,
     stream: mediaResponse.data,
+    headers: mediaResponse.headers,
+    status: mediaResponse.status,
   };
 }
