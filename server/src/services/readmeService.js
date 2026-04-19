@@ -12,6 +12,18 @@ function formatBytes(bytes) {
   return `${value.toFixed(2)} ${units[index]}`;
 }
 
+function formatPrice(price) {
+  if (price === null || price === undefined || Number.isNaN(Number(price))) {
+    return "N/A";
+  }
+
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(Number(price));
+}
+
 function mediaTypeLabel(mimeType) {
   if (mimeType.startsWith("image/")) return "Image";
   if (mimeType.startsWith("video/")) return "Video";
@@ -51,7 +63,7 @@ export function generatePropertyReadme(property) {
   lines.push("");
   lines.push(`- **Property:** ${property.title}`);
   lines.push(`- **Location:** ${property.location || "N/A"}`);
-  lines.push(`- **Price:** ${property.price ? `$${property.price}` : "N/A"}`);
+  lines.push(`- **Price:** ${formatPrice(property.price)}`);
   lines.push(`- **Description:** ${property.description || "N/A"}`);
   lines.push(`- **Report Date:** ${now.toLocaleString()}`);
   lines.push("");
